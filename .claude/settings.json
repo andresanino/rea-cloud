@@ -1,0 +1,27 @@
+{
+  "enableAllProjectMcpServers": true,
+  "env": {
+    "MCP_TIMEOUT": "180000"
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/session-start.sh\"",
+            "timeout": 540
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(npx -y rea-agents@6.5.0:*)",
+      "Bash(bash scripts/session-start.sh)",
+      "Bash(bash scripts/rea-mcp.sh:*)"
+    ]
+  }
+}

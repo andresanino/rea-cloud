@@ -1,0 +1,9 @@
+node_modules/
+npm-debug.log*
+*.log
+.DS_Store
+Thumbs.db
+tmp/
+
+# Local-only artifacts that must never be pushed (cloud sessions won't see them)
+targets/private/

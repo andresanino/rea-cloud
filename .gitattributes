@@ -1,0 +1,30 @@
+# Scripts must stay LF so they run on the Linux cloud image.
+* text=auto eol=lf
+*.sh text eol=lf
+
+# Targets are binaries: never normalize or diff them.
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary
+*.asar binary
+*.apk binary
+*.ipa binary
+*.msix binary
+*.appx binary
+*.dmg binary
+*.zip binary
+*.jar binary
+*.nupkg binary
+*.bin binary
+*.img binary
+*.pcap binary
+*.pcapng binary
+*.saz binary
+*.wasm binary
+*.db binary
+*.sqlite binary
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary

@@ -1,0 +1,14 @@
+{
+  "name": "rea-cloud",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": { "version": "24" },
+    "ghcr.io/devcontainers/features/java:1": { "version": "21" }
+  },
+  "postCreateCommand": "npm install --global rea-agents@6.5.0 && bash scripts/session-start.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": ["anthropic.claude-code"]
+    }
+  }
+}
