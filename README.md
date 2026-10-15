@@ -41,15 +41,40 @@ GitHub App is installed for "selected repositories", add `rea-cloud` at
 
 Without any extra engine REA can statically inspect: JavaScript/Electron apps
 (ASAR or extracted), .NET assemblies, archives and packages (ZIP/APK/IPA/MSIX/
-DMG), Android APK structure, Go and Rust build metadata, PE resources, ELF
+DMG, as member inventories), Go and Rust build metadata, PE resources, ELF
 layout/symbols/mitigations, SQLite databases, WebAssembly, EVM bytecode, and
-recorded network captures (pcap/HAR/SAZ, given tshark).
+recorded HAR/SAZ/mitmproxy/qlog web captures. APK *code* and pcap/pcapng
+captures need the tools described below.
 
 Native **decompilation** (pseudocode) needs Ghidra or IDA, which the cloud
 image does not include. To add Ghidra, give the cloud environment a setup
 script that downloads a Ghidra 12.1.x release (the image already has OpenJDK
 21) and exports `GHIDRA_INSTALL_DIR`; the environment cache keeps it between
 sessions. See REA's docs for the provider details.
+
+Two more inspections need a tool the image also lacks. REA reports
+`provider_missing` (`capability_unavailable` from the CLI) until the same
+setup script supplies it, and never installs it; the SessionStart hook only
+prints whether each variable is set.
+
+- **Android APK code** (`inspect_android_package`, `search_android_classes`,
+  `inspect_android_class`, `inspect_android_method`,
+  `trace_android_references`) needs a jadx-headless-mcp 0.7.1 JAR: export
+  `REA_JADX_MCP_JAR` as its absolute path (the image's OpenJDK 21 satisfies
+  the Java 17+ requirement). `decode_android_resources` needs an apktool
+  launcher in `REA_APKTOOL_COMMAND` as well. Without them an APK is still an
+  archive: `open_binary` on the `.apk` and then `inspect_artifact` list its
+  ZIP members (`classes.dex`, `AndroidManifest.xml`, `lib/`, `res/`) with
+  sizes and digests, but read nothing inside them.
+- **Packet captures (pcap/pcapng)** need Wireshark's TShark 4.x. Export
+  `REA_TSHARK_COMMAND` as the absolute path of `tshark` for
+  `inspect_packet_capture` and `inspect_packet_fields` (REA runs it under
+  `/usr/bin/prlimit`, which the image has). The summary tool
+  `inspect_pcap_capture` runs `tshark` and `capinfos` as well, taken from
+  `PATH` or from `REA_TSHARK_COMMAND` and `REA_CAPINFOS_COMMAND`; on the
+  image it fails with `spawn tshark ENOENT` even though `binary_session`
+  lists it as available. HAR, SAZ, mitmproxy and qlog captures
+  (`inspect_web_network_capture`) need nothing extra.
 
 ## Make sessions start faster
 
