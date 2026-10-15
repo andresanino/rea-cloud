@@ -101,11 +101,23 @@ main() {
     log "WARNING: 'rea mcp doctor' failed; run: npx -y $REA_PACKAGE mcp doctor"
   fi
 
-  # Optional analysis engines: report them, never install them.
+  # Optional analysis engines and tools: report them, never install them.
   if [ -n "${GHIDRA_INSTALL_DIR:-}" ]; then
     log "GHIDRA_INSTALL_DIR=$GHIDRA_INSTALL_DIR"
   else
-    log "GHIDRA_INSTALL_DIR not set: no native decompilation; static JS/.NET/archive/APK/Go/Rust/PE/ELF/SQLite/WASM inspection still works"
+    log "GHIDRA_INSTALL_DIR not set: no native decompilation; static JS/.NET/archive/Go/Rust/PE/ELF/SQLite/WASM inspection still works"
+  fi
+  if [ -n "${REA_JADX_MCP_JAR:-}" ]; then
+    log "REA_JADX_MCP_JAR=$REA_JADX_MCP_JAR"
+  else
+    log "REA_JADX_MCP_JAR not set: no APK code inspection (inspect_android_package needs a jadx-headless-mcp 0.7.1 JAR); inspect_artifact still lists an APK's members"
+  fi
+  if [ -n "${REA_TSHARK_COMMAND:-}" ]; then
+    log "REA_TSHARK_COMMAND=$REA_TSHARK_COMMAND"
+  elif command -v tshark >/dev/null 2>&1; then
+    log "REA_TSHARK_COMMAND not set: tshark on PATH at $(command -v tshark) serves inspect_pcap_capture only; inspect_packet_capture/inspect_packet_fields need the absolute path in REA_TSHARK_COMMAND"
+  else
+    log "REA_TSHARK_COMMAND not set and no tshark on PATH: no pcap/pcapng inspection (inspect_packet_capture, inspect_packet_fields and inspect_pcap_capture need TShark 4.x); HAR/SAZ captures still work"
   fi
 }
 

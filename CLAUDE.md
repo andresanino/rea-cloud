@@ -22,18 +22,30 @@ before the first analysis in a session.
 
 - Use the `rea` MCP tools directly (`open_binary`, `inspect_artifact`,
   `analyze_javascript_application`, `inspect_managed_artifact`,
-  `inspect_android_package`, `inspect_binary_layout`, `inspect_go_binary`,
-  `inspect_rust_binary`, `inspect_pe_resources`, `inspect_packet_capture`, …).
-  Use the server's actual tool list and schemas; don't call unadvertised tools.
+  `inspect_binary_layout`, `inspect_go_binary`, `inspect_rust_binary`,
+  `inspect_pe_resources`, `inspect_web_network_capture`, …). Use the
+  server's actual tool list and schemas; don't call unadvertised tools.
 - Do not re-run REA setup or diagnostics before every task. If the `rea` tools
   are missing, run `bash scripts/session-start.sh` and read its output. The CLI
   fallback `npx -y rea-agents@6.5.0 <command> --json` works without MCP.
 - Native decompilation (pseudocode, function analysis) needs Ghidra or IDA,
   which are not in the cloud image unless `GHIDRA_INSTALL_DIR` is set by the
-  environment's setup script. Static inspection of JS/Electron, .NET, archives,
-  APK structure, Go/Rust metadata, PE resources, ELF layout, SQLite, WASM and
-  packet captures works without an engine. When a question needs an engine
-  that isn't available, say so in the report instead of guessing.
+  environment's setup script. Static inspection of JS/Electron, .NET, archives
+  (an APK's member list included), Go/Rust metadata, PE resources, ELF layout,
+  SQLite, WASM and HAR/SAZ web captures works without an engine. When a
+  question needs an engine that isn't available, say so in the report instead
+  of guessing.
+- APK code and pcap/pcapng captures need tools the image lacks and REA never
+  installs: `inspect_android_package` and the Android class, method and
+  reference tools need a jadx-headless-mcp 0.7.1 JAR named by
+  `REA_JADX_MCP_JAR`; `inspect_packet_capture`, `inspect_packet_fields` and
+  also `inspect_pcap_capture` need TShark 4.x named by `REA_TSHARK_COMMAND`
+  (`inspect_pcap_capture` runs `capinfos` too). Unless the environment's setup
+  script provides them REA answers `provider_missing` or
+  `capability_unavailable` and the hook prints which variable is unset. An APK
+  can still be inventoried as an archive with `open_binary` and
+  `inspect_artifact`, and HAR/SAZ captures read with
+  `inspect_web_network_capture`.
 - Reports separate observations (cite REA Evidence IDs), inferences, and
   unknowns, and list what was not checked.
 - Never execute an analyzed target unless the user explicitly asks for runtime
