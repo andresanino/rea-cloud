@@ -30,14 +30,28 @@ node_ok() {
   esac
 }
 
+node_major() { # node-path -> major version
+  local v
+  v="$("$1" -v 2>/dev/null)" || return 1
+  v="${v#v}"
+  printf '%s\n' "${v%%.*}"
+}
+
+# Picks the Node to use: the first supported one that is at least
+# REA_NODE_MAJOR, looking at PATH and then the known install directories (so a
+# Node 24 put in /opt/node24 by scripts/cloud-setup.sh wins over the cloud
+# image's Node 22 on PATH); failing that, the first supported one at all.
 find_node() {
-  node_ok "$(command -v node || echo /nonexistent)" && return 0
-  local dir
-  for dir in "$HOME/.local/node/bin" /opt/node26/bin /opt/node24/bin /opt/node22/bin; do
-    if [ -x "$dir/node" ] && node_ok "$dir/node"; then
-      export PATH="$dir:$PATH"
+  local pass cand dir
+  for pass in preferred any; do
+    for cand in "$(command -v node || echo /nonexistent)" "$HOME/.local/node/bin/node" \
+                /opt/node26/bin/node /opt/node24/bin/node /opt/node22/bin/node; do
+      if [ ! -x "$cand" ] || ! node_ok "$cand"; then continue; fi
+      if [ "$pass" = preferred ] && [ "$(node_major "$cand")" -lt "$REA_NODE_MAJOR" ]; then continue; fi
+      dir="$(dirname "$cand")"
+      case ":$PATH:" in *":$dir:"*) ;; *) export PATH="$dir:$PATH" ;; esac
       return 0
-    fi
+    done
   done
   return 1
 }

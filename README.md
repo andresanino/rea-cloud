@@ -10,6 +10,7 @@ Cloning this repo gives a session everything it needs:
 | `.mcp.json` | Registers REA as the `rea` MCP server (via `scripts/rea-mcp.sh`) |
 | `.claude/settings.json` | Auto-approves that server, raises the MCP start timeout, runs the SessionStart hook |
 | `scripts/session-start.sh` | Picks (or installs) a supported Node.js, warms the `rea-agents` npx cache, checks the server starts |
+| `scripts/cloud-setup.sh` | Optional cloud environment Setup script: installs Ghidra 12.1.x, a pwntools Python and Node 24 into the environment cache (see [Enable native analysis in the cloud](#enable-native-analysis-in-the-cloud)) |
 | `.claude/skills/reverse-engineer-anything/` | REA's own skill: how to route targets and report evidence |
 | `CLAUDE.md` | Working rules for Claude in this repo |
 | `targets/`, `reports/` | Where artifacts go in and findings come out |
@@ -45,19 +46,57 @@ DMG), Android APK structure, Go and Rust build metadata, PE resources, ELF
 layout/symbols/mitigations, SQLite databases, WebAssembly, EVM bytecode, and
 recorded network captures (pcap/HAR/SAZ, given tshark).
 
-Native **decompilation** (pseudocode) needs Ghidra or IDA, which the cloud
-image does not include. To add Ghidra, give the cloud environment a setup
-script that downloads a Ghidra 12.1.x release (the image already has OpenJDK
-21) and exports `GHIDRA_INSTALL_DIR`; the environment cache keeps it between
-sessions. See REA's docs for the provider details.
+Native **decompilation** (`binary_overview`, pseudocode and function analysis
+need Ghidra or IDA), `inspect_binary_layout` (needs a Python with pwntools) and
+`inspect_sqlite_database` (needs Node 24.15+) need an engine the image lacks.
+The next section adds all three with one setup script.
+
+## Enable native analysis in the cloud
+
+`scripts/cloud-setup.sh` installs the missing engines into the cloud
+environment, where the environment cache keeps them between sessions:
+
+| Install | Enables |
+| --- | --- |
+| `/opt/ghidra` — Ghidra 12.1.x from the official GitHub release, SHA-256 checked against the value published with the release; runs on the image's OpenJDK 21 | `binary_overview`, pseudocode and function analysis |
+| `/opt/rea-pwntools` — Python venv with pwntools 4.15.0, pyelftools 0.33 and unicorn 2.1.2 | `inspect_binary_layout` |
+| `/opt/node24` — Node.js 24 from nodejs.org, checksum-verified; `scripts/rea-mcp.sh` and the hook prefer it over the image's Node 22 | `inspect_sqlite_database` (needs Node 24.15+) |
+
+1. Open the cloud environment's settings (claude.ai/code → environment
+   settings) and paste the whole of `scripts/cloud-setup.sh` into the
+   **Setup script** field. It also warms the `rea-agents` npx cache, so it
+   replaces `scripts/session-start.sh` there.
+2. In the **Environment variables** field add these three lines (the script
+   prints them again at the end of its output):
+
+   ```
+   GHIDRA_INSTALL_DIR=/opt/ghidra
+   REA_PWNTOOLS_PYTHON=/opt/rea-pwntools/bin/python
+   REA_NODE_MAJOR=24
+   ```
+
+3. Restart the session (start a new one). The first start runs the script;
+   the three installs run in parallel and the 570 MB Ghidra download is the
+   long pole, so expect a few minutes. Later sessions reuse the cached `/opt`
+   directories: a re-run skips every install that is already there.
+
+The script prints `[rea-cloud-setup] …` lines and always exits 0, so if a tool
+still answers `provider_unavailable`, read the setup output for the step that
+failed. Network: besides `registry.npmjs.org`, the environment must reach
+`github.com` and `release-assets.githubusercontent.com` (Ghidra), `pypi.org`
+and `files.pythonhosted.org` (pwntools) and `nodejs.org` (Node).
+`api.github.com` is used to find the newest 12.1.x release; when it is blocked
+the script falls back to the release pinned inside it. IDA, Hopper and jadx are
+not covered.
 
 ## Make sessions start faster
 
-The SessionStart hook does its work on every new VM. To cache it, paste the
-contents of `scripts/session-start.sh` into the cloud environment's **Setup
-script** field (claude.ai/code → environment settings). Setup scripts are
-cached when they finish in about five minutes, so the Node install and npx
-warm-up are reused.
+The SessionStart hook does its work on every new VM. To cache it, paste a
+script into the cloud environment's **Setup script** field (claude.ai/code →
+environment settings): `scripts/cloud-setup.sh` if you want the engines above
+(it warms the npx cache too), otherwise `scripts/session-start.sh`. Setup
+scripts are cached when they finish in about five minutes, so the installs and
+the npx warm-up are reused.
 
 ## Local use and Codespaces
 

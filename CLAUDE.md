@@ -17,6 +17,8 @@ before the first analysis in a session.
 - `scripts/rea-mcp.sh` — launches the MCP server with a supported Node.js.
 - `scripts/session-start.sh` — SessionStart hook: picks/installs Node, warms the
   `rea-agents` npx cache, runs `rea mcp doctor`, reports optional engines.
+- `scripts/cloud-setup.sh` — optional cloud environment Setup script: installs
+  Ghidra 12.1.x, a pwntools venv and Node 24 under `/opt` (see README).
 
 ## Working here
 
@@ -28,12 +30,16 @@ before the first analysis in a session.
 - Do not re-run REA setup or diagnostics before every task. If the `rea` tools
   are missing, run `bash scripts/session-start.sh` and read its output. The CLI
   fallback `npx -y rea-agents@6.5.0 <command> --json` works without MCP.
-- Native decompilation (pseudocode, function analysis) needs Ghidra or IDA,
-  which are not in the cloud image unless `GHIDRA_INSTALL_DIR` is set by the
-  environment's setup script. Static inspection of JS/Electron, .NET, archives,
-  APK structure, Go/Rust metadata, PE resources, ELF layout, SQLite, WASM and
-  packet captures works without an engine. When a question needs an engine
-  that isn't available, say so in the report instead of guessing.
+- Native decompilation (pseudocode, function analysis), `inspect_binary_layout`
+  and `inspect_sqlite_database` work in the cloud when the environment was set
+  up with `scripts/cloud-setup.sh` and has `GHIDRA_INSTALL_DIR`,
+  `REA_PWNTOOLS_PYTHON` and `REA_NODE_MAJOR` set (the SessionStart hook's
+  output shows whether `GHIDRA_INSTALL_DIR` is set); on a plain cloud image
+  they are unavailable and nothing in a session can install them. Static
+  inspection of JS/Electron, .NET, archives, APK structure, Go/Rust metadata,
+  PE resources, ELF layout, SQLite, WASM and packet captures works without an
+  engine. When a question needs an engine that isn't available, say so in the
+  report instead of guessing.
 - Reports separate observations (cite REA Evidence IDs), inferences, and
   unknowns, and list what was not checked.
 - Never execute an analyzed target unless the user explicitly asks for runtime
