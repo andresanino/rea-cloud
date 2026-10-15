@@ -32,8 +32,13 @@ before the first analysis in a session.
   which are not in the cloud image unless `GHIDRA_INSTALL_DIR` is set by the
   environment's setup script. Static inspection of JS/Electron, .NET, archives,
   APK structure, Go/Rust metadata, PE resources, ELF layout, SQLite, WASM and
-  packet captures works without an engine. When a question needs an engine
-  that isn't available, say so in the report instead of guessing.
+  packet captures works without an engine. SQLite inspection does need Node
+  24.15+ or 26+: the cloud image only has Node 22, so `scripts/rea-mcp.sh` and
+  the SessionStart hook install Node 24 under `~/.local/node` first; if that
+  download failed, the hook's `node` line says so and
+  `inspect_sqlite_database` reports `provider_unavailable`. When a question
+  needs an engine that isn't available, say so in the report instead of
+  guessing.
 - Reports separate observations (cite REA Evidence IDs), inferences, and
   unknowns, and list what was not checked.
 - Never execute an analyzed target unless the user explicitly asks for runtime
