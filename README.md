@@ -7,9 +7,9 @@ Cloning this repo gives a session everything it needs:
 
 | File | What it does |
 | --- | --- |
-| `.mcp.json` | Registers REA as the `rea` MCP server (via `scripts/rea-mcp.sh`) |
+| `.mcp.json` | Registers REA as the `rea` MCP server (via `scripts/rea-mcp.sh`, which picks or installs the Node.js it runs on) |
 | `.claude/settings.json` | Auto-approves that server, raises the MCP start timeout, runs the SessionStart hook |
-| `scripts/session-start.sh` | Picks (or installs) a supported Node.js, warms the `rea-agents` npx cache, checks the server starts |
+| `scripts/session-start.sh` | Picks (or installs) a Node.js that runs REA and its SQLite inspection, warms the `rea-agents` npx cache, checks the server starts |
 | `.claude/skills/reverse-engineer-anything/` | REA's own skill: how to route targets and report evidence |
 | `CLAUDE.md` | Working rules for Claude in this repo |
 | `targets/`, `reports/` | Where artifacts go in and findings come out |
@@ -45,6 +45,14 @@ DMG), Android APK structure, Go and Rust build metadata, PE resources, ELF
 layout/symbols/mitigations, SQLite databases, WebAssembly, EVM bytecode, and
 recorded network captures (pcap/HAR/SAZ, given tshark).
 
+SQLite inspection needs Node 24.15+ or 26+ (its native `DatabaseSync.limits`
+API) and the cloud image only ships Node 22, so `scripts/rea-mcp.sh` and the
+SessionStart hook install the latest Node 24 under `~/.local/node` before
+starting REA: one download of about 60 MB from nodejs.org per fresh VM, skipped
+when the environment cache (see below) or the image already provides one. If
+that download fails, REA still runs on Node 22 and only
+`inspect_sqlite_database` reports `provider_unavailable`.
+
 Native **decompilation** (pseudocode) needs Ghidra or IDA, which the cloud
 image does not include. To add Ghidra, give the cloud environment a setup
 script that downloads a Ghidra 12.1.x release (the image already has OpenJDK
@@ -56,8 +64,8 @@ sessions. See REA's docs for the provider details.
 The SessionStart hook does its work on every new VM. To cache it, paste the
 contents of `scripts/session-start.sh` into the cloud environment's **Setup
 script** field (claude.ai/code → environment settings). Setup scripts are
-cached when they finish in about five minutes, so the Node install and npx
-warm-up are reused.
+cached when they finish in about five minutes, so the Node 24 install and npx
+warm-up are reused and the MCP server starts without downloading anything.
 
 ## Local use and Codespaces
 
