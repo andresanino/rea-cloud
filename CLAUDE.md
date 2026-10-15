@@ -14,6 +14,9 @@ before the first analysis in a session.
   `NOTES.md` (origin, version, the questions to answer).
 - `reports/` — one Markdown report per investigation,
   `reports/<target>-<YYYY-MM-DD>.md`.
+- `rebuilds/<name>/` — clean reimplementations rebuilt from the evidence, each
+  with a differential test against the original artifact (worked example:
+  `rebuilds/mustache/`).
 - `scripts/rea-mcp.sh` — launches the MCP server with a supported Node.js.
 - `scripts/session-start.sh` — SessionStart hook: picks/installs Node, warms the
   `rea-agents` npx cache, runs `rea mcp doctor`, reports optional engines.

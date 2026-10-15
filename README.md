@@ -13,6 +13,7 @@ Cloning this repo gives a session everything it needs:
 | `.claude/skills/reverse-engineer-anything/` | REA's own skill: how to route targets and report evidence |
 | `CLAUDE.md` | Working rules for Claude in this repo |
 | `targets/`, `reports/` | Where artifacts go in and findings come out |
+| `rebuilds/` | Clean reimplementations rebuilt from the evidence, with differential tests against the original (worked example: `rebuilds/mustache/`, see `reports/mustache-min-2026-10-15.md`) |
 | `.devcontainer/` | Same setup for GitHub Codespaces |
 
 ## Start a session
