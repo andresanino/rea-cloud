@@ -26,6 +26,13 @@ Cloning this repo gives a session everything it needs:
 3. Ask the question. The REA tools are loaded automatically; the SessionStart
    hook prints `[rea-cloud] …` lines showing Node, REA version and engine status.
 
+> **Visibility:** this repo is currently *public* so that Claude cloud sessions can clone it
+> through a browser-connected GitHub account that has no Claude GitHub App installed on
+> `andresanino`. Before committing anything confidential to `targets/`, make it private
+> again (`gh repo edit andresanino/rea-cloud --visibility private`) **and** install the
+> Claude GitHub App on the `andresanino` account with this repo selected
+> (<https://github.com/apps/claude/installations/new>), otherwise cloud sessions lose access.
+
 The repo needs to be visible to your Claude GitHub connection: if the Claude
 GitHub App is installed for "selected repositories", add `rea-cloud` at
 <https://github.com/apps/claude>.
