@@ -31,9 +31,15 @@ before the first analysis in a session.
 - Native decompilation (pseudocode, function analysis) needs Ghidra or IDA,
   which are not in the cloud image unless `GHIDRA_INSTALL_DIR` is set by the
   environment's setup script. Static inspection of JS/Electron, .NET, archives,
-  APK structure, Go/Rust metadata, PE resources, ELF layout, SQLite, WASM and
-  packet captures works without an engine. When a question needs an engine
-  that isn't available, say so in the report instead of guessing.
+  APK structure, Go/Rust metadata, PE resources, ELF headers/sections (via
+  `inspect_with_objdump` after `open_binary`), SQLite and packet captures
+  works without an engine. `inspect_wasm_artifact` needs WABT 1.0.42
+  (`REA_WABT_BIN_DIRECTORY`) and `inspect_binary_layout` needs a Python with
+  pwntools 4.15.0, pyelftools 0.33 and Unicorn 2.1.2 (`REA_PWNTOOLS_PYTHON`);
+  the cloud image has neither, so unless the environment's setup script
+  provides them REA reports `provider_missing` and the hook says which
+  variable is unset. When a question needs an engine that isn't available,
+  say so in the report instead of guessing.
 - Reports separate observations (cite REA Evidence IDs), inferences, and
   unknowns, and list what was not checked.
 - Never execute an analyzed target unless the user explicitly asks for runtime

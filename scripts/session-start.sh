@@ -101,11 +101,21 @@ main() {
     log "WARNING: 'rea mcp doctor' failed; run: npx -y $REA_PACKAGE mcp doctor"
   fi
 
-  # Optional analysis engines: report them, never install them.
+  # Optional analysis engines and tools: report them, never install them.
   if [ -n "${GHIDRA_INSTALL_DIR:-}" ]; then
     log "GHIDRA_INSTALL_DIR=$GHIDRA_INSTALL_DIR"
   else
-    log "GHIDRA_INSTALL_DIR not set: no native decompilation; static JS/.NET/archive/APK/Go/Rust/PE/ELF/SQLite/WASM inspection still works"
+    log "GHIDRA_INSTALL_DIR not set: no native decompilation; static JS/.NET/archive/APK/Go/Rust/PE/SQLite inspection and ELF headers/sections via objdump still work"
+  fi
+  if [ -n "${REA_WABT_BIN_DIRECTORY:-}" ]; then
+    log "REA_WABT_BIN_DIRECTORY=$REA_WABT_BIN_DIRECTORY"
+  else
+    log "REA_WABT_BIN_DIRECTORY not set: no WebAssembly inspection (inspect_wasm_artifact needs WABT 1.0.42)"
+  fi
+  if [ -n "${REA_PWNTOOLS_PYTHON:-}" ]; then
+    log "REA_PWNTOOLS_PYTHON=$REA_PWNTOOLS_PYTHON"
+  else
+    log "REA_PWNTOOLS_PYTHON not set: no inspect_binary_layout/inspect_recorded_crash (they need a Python with pwntools 4.15.0, pyelftools 0.33, Unicorn 2.1.2)"
   fi
 }
 

@@ -42,14 +42,30 @@ GitHub App is installed for "selected repositories", add `rea-cloud` at
 Without any extra engine REA can statically inspect: JavaScript/Electron apps
 (ASAR or extracted), .NET assemblies, archives and packages (ZIP/APK/IPA/MSIX/
 DMG), Android APK structure, Go and Rust build metadata, PE resources, ELF
-layout/symbols/mitigations, SQLite databases, WebAssembly, EVM bytecode, and
-recorded network captures (pcap/HAR/SAZ, given tshark).
+headers, sections and other GNU objdump output (`inspect_with_objdump`, after
+`open_binary`), SQLite databases, EVM bytecode, and recorded network captures
+(pcap/HAR/SAZ, given tshark).
 
 Native **decompilation** (pseudocode) needs Ghidra or IDA, which the cloud
 image does not include. To add Ghidra, give the cloud environment a setup
 script that downloads a Ghidra 12.1.x release (the image already has OpenJDK
 21) and exports `GHIDRA_INSTALL_DIR`; the environment cache keeps it between
 sessions. See REA's docs for the provider details.
+
+Two static inspections need a tool the image also lacks, and REA reports
+`provider_missing` for them until the same setup script supplies it:
+
+- **WebAssembly** (`inspect_wasm_artifact`) needs WABT 1.0.42 (`wasm-validate`,
+  `wasm-objdump`, `wasm2wat`): export `REA_WABT_BIN_DIRECTORY` as the absolute
+  path of the directory that holds them.
+- **ELF layout, symbols and mitigations** (`inspect_binary_layout`, and
+  `inspect_recorded_crash` for core dumps) needs a Python with pwntools 4.15.0,
+  pyelftools 0.33 and Unicorn 2.1.2: export `REA_PWNTOOLS_PYTHON` as the
+  absolute path of that interpreter (a venv works; the image's
+  `/usr/bin/python3` has no pwntools).
+
+REA never installs any of these, and the SessionStart hook only reports
+whether the variables are set.
 
 ## Make sessions start faster
 
