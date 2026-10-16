@@ -188,3 +188,173 @@ npx -y rea-agents@6.5.0 inspect-analysis-view view.json --json
 # 3. prove the rebuild
 node --test rebuilds/mustache/test/differential.test.mjs
 ```
+
+## REA source-vs-bundle comparison (Linux, 2026-10-15)
+
+Follow-up to the open item in "Unknowns and limits": the
+`import-reference-source` step that Windows refused ran here on the cloud
+image (Ubuntu 24.04, Node v22.22.0, `rea-agents@6.5.0` via the CLI route,
+which returns the same Evidence records as the MCP tools). Evidence IDs below
+are from this run; they are not the Windows IDs above, because every run
+produces its own records.
+
+### Evidence (this run)
+
+| Record | ID |
+| --- | --- |
+| Static analysis (`analyze-javascript-application`, provider `rea-javascript-application` v1, authority `shipped-artifact`, confidence `derived`) | `ev_94b4525be5fb814702b9784ea382a9cf7c15e385b56d5e9167ae87ac11a1f0f2` |
+| Application graph / semantic graph inside it | `jag_a98615b6277c5e3cf708cdd2d323a46ca5c0650aaf31797a79da16fb63f48dcb` / `jsrg_c2a12c1905c19fa9aa58cf8f137a4df184e63d207b9e8e1e50a1442cd5b1e06c` |
+| Inventory manifest / directory root digest | `agm_2e95ae34c36d3d5c5fb7ed42d80a65b4ecde2885edfaead9c3fa1f3bf3756c20` / `a5bcbb5384db6e12958d511068ef3d3e9099e05e0ae0e6c17cef1a05c4fb4fff` (root digest identical to the Windows run) |
+| Historical reference import (`import-reference-source`, schema `HistoricalSourceGraph`, authority `historical-reference`; this document carries no Evidence ID, its identity is the root digest) | `root_sha256` `9ec839dfed168fff50c766a69a14c07cb353ce3918698121af68d5822526ec50` |
+| Comparison (`compare-source-to-bundle`, provider `rea-javascript-application-workflows` v1, predicate `rea.source-to-bundle-comparison`, authority `analyst-inference`, confidence `inferred`) | `ev_94c3649f473ead15eaa8f8ceffbdf685a73f59d302dab251c3931df5f6afa2fc` (`comparison_id` `stbc_0bdfedc3f6381e64f08f6ccc1f18e09fedb822372336db88fe843d4c435ac2eb`) |
+
+### Observations
+
+**Step 1, static analysis re-run.** Same inventory and graph shape as the
+Windows run: 1 relevant file, 11,790 text bytes, 1 JavaScript file parsed,
+2,505 AST nodes, 0 parse failures, 0 integrity contradictions; semantic graph
+of 1,838 nodes (function 47, expression 1,281, binding 130, call-site 125,
+property-slot 123, parameter 74, return-site 44, literal 8, boundary 5,
+module 1), 2,059 relations, 47 function fingerprints, 549 unknowns. All 47
+`function` nodes carry `identity.artifact_sha256 =
+d7fd0603512461e8edbd81686bead2ab82df3389b9cca235dd9d5b408848e02a` (the
+artifact's SHA-256) with `module_path: mustache.min.js` and their column
+range, and the graph's `javascript-asset` node for `mustache.min.js` has
+identity strategy `content-digest` with the same SHA-256 and 11,790 bytes.
+
+**Step 2, reference import.** `rebuilds/mustache` imported without refusing
+anything, so no temporary directory was needed. Result: schema
+`HistoricalSourceGraph`, `inventory_state: partial`, 4 entries, 6
+relationships, 0 parse failures, 0 exclusions, languages JavaScript and
+Markdown, VCS head `21844df`:
+
+| Entry | Kind | Classification | SHA-256 / state |
+| --- | --- | --- | --- |
+| `README.md` | file, 1,066 bytes | documentation | `6233ee8b…` hashed |
+| `mustache.mjs` | file, 19,473 bytes | source | `264c29b18e8dc8447b5d1dbbb178960ce5117aa23b5eaf309ec9ae28179e59ec` hashed |
+| `test` | directory | source, test | enumerated |
+| `test/differential.test.mjs` | file, 13,776 bytes | source, test | `5ec130407e5b727bb020493f9849200803aa61c109ec4294f29c1ec035ec07f9` hashed |
+
+The relationships are the test file's imports: `mustache.mjs` (internal) and
+`node:assert/strict`, `node:module`, `node:path`, `node:test`, `node:url`
+(external), all `parsed`. The only limitation recorded is host-level: "Path
+identity is revalidated around operations; Node lacks portable
+descriptor-relative openat traversal, so a syscall-boundary pathname race
+remains."
+
+**Step 3, comparison input.** `/tmp/compare-input.json` was built by a Node
+script as `{"reference": <import output>, "application": <analysis record>}`;
+the import output is the `HistoricalSourceGraph` itself (not wrapped), and no
+field of either document was edited. Validation accepted it as is. Running
+the comparison a second time from the same two inputs produced a
+byte-identical record with the same Evidence ID.
+
+**Step 4, comparison result** (`normalized_result` of `ev_94c3649f…`):
+
+| Measure | Value |
+| --- | --- |
+| Scoring model | `rea-source-to-bundle-signals`, minimum candidate score 20; weights: exact-source-digest 100, source-map-original-path 70, current-path-exact 60, current-path-suffix 40, unicode-equivalent-path 20, basename-match 20, language-extension 5 |
+| Summary | unchanged 0, modified 0, removed 0, split 0, merged 0, duplicated 0, **unknown 2** |
+| `mustache.mjs` | status `unknown`, confidence `unknown`, 0 candidates: "No candidate was observed, but incomplete input or graph coverage prevents a removal claim." |
+| `test/differential.test.mjs` | same |
+| Unmapped bundle nodes | 3 of 3: the `mustache.min.js` asset (content digest `d7fd0603…`), its `source-module` node, and its CommonJS `default` export node |
+| Coverage | status `partial`; reference inventory `partial`; application graph `complete`; 2 source files retained; 3 application nodes retained; **0 candidate evaluations** |
+
+In plain language:
+
+- **Digest: no match.** The rebuild's bytes (`264c29b1…`) and the bundle's
+  (`d7fd0603…`) differ, as they must for a rewrite; an exact digest is the
+  only signal this tool reports as `unchanged`.
+- **Structural fingerprint and semantic matches: none attempted.** This
+  comparison maps *files* by identity signals (digest, source-map path, path,
+  basename, extension). It does not read the 47 function fingerprints in the
+  analysis record (normalized-AST, control-flow, relation-shape and
+  literal-set hashes), so it produced no function-level matches and no
+  function-level mismatches. The expectation that ESM/class/formatting
+  differences would make fingerprints differ could therefore not be tested
+  with this tool.
+- **Unmatched: everything.** Both reference source files are `unknown` and
+  all three bundle nodes are unmapped. The tool did *not* call the source
+  files `removed`, because a removal claim needs a `complete` reference
+  inventory and this one is `partial`.
+- **Limitations recorded** (verbatim, from the record): "Artifact identity is
+  unavailable for this observation."; "Static digest and location signals do
+  not establish runtime behavior, semantic equivalence, or absence of
+  dynamically generated modules."; "Historical source inventory is partial;
+  unmatched files remain unknown."; the openat path-race note above; and the
+  five static-analysis limitations inherited from `ev_94b4525b…` (inert
+  parsing, no bootstrap execution, static relationships do not prove runtime
+  execution, dynamic paths may stay unresolved, Webpack/Rspack factories read
+  from AST literals).
+
+**Step 5, differential test on this image** (Node v22.22.0):
+
+```
+node --test rebuilds/mustache/test/differential.test.mjs
+ok 1 - curated corpus: identical render output, parse tokens and errors
+ok 2 - escape function and exports match
+ok 3 - template cache: same keys, can be replaced and disabled
+ok 4 - generated templates: 3000 cases agree (output, tokens and errors)
+# tests 4
+# pass 4
+# fail 0
+```
+
+4 of 4 tests pass, 0 fail: the 67 curated cases (57 render, 10 throw) and the
+3,000 generated templates agree on output, tokens and errors, as on Windows.
+
+### Inferences
+
+- **Why the reference inventory is `partial`.** Read from the installed
+  package (`dist/application/ReferenceSourceImport.js` in `rea-agents@6.5.0`):
+  the importer marks an inventory `partial` whenever the import carries any
+  limitation, and this host always carries the openat path-race limitation.
+  Every entry was hashed, the directory fully enumerated and every
+  relationship parsed and resolved, so nothing is missing from the inventory;
+  the flag records a guarantee the importer cannot give on Node, and its
+  practical effect here is that no file can be classified `removed`.
+- **Why zero candidates were evaluated.** Read from
+  `dist/domain/javascript/sourceToBundleSignals.js`: candidates are collected
+  by index lookup on digest, path and basename before any scoring, and the
+  extension signal is only added to candidates already collected. The rebuild
+  is `mustache.mjs`, the bundle is `mustache.min.js`: different digest, path
+  and basename, so no candidate was collected. Renaming the rebuild to
+  `mustache.min.js` would have produced one basename-only candidate (score
+  25, confidence `low`), which the tool's own rules still classify as
+  `unknown` ("no mapping was forced"); it was not done.
+- **What the comparison does establish.** Only that the rebuild shares no
+  bytes, path or source map with the shipped bundle, which is consistent with
+  it being new code. It says nothing about behavioural equivalence either way;
+  that claim continues to rest on the differential test, and the record itself
+  says static digest and location signals cannot establish equivalence.
+
+### Unknowns and not checked
+
+- No REA function-level comparison between the rebuild and the bundle was run.
+  The REA route for that would be a second `analyze-javascript-application`
+  over `rebuilds/mustache` followed by `compare-application-versions` (or
+  `compare-javascript-export-shapes` for the export surface); it was outside
+  this step's scope.
+- The explanations of `partial` and of the empty candidate list are read from
+  the installed 6.5.0 code, not from REA documentation.
+- The `rea` MCP server was not used for these steps; the CLI returns the same
+  Evidence records directly.
+
+### Commands (as run from the repo root on the cloud image)
+
+```bash
+npx -y rea-agents@6.5.0 analyze-javascript-application "$PWD/targets/mustache-min" --json > /tmp/analysis.json
+npx -y rea-agents@6.5.0 import-reference-source "$PWD/rebuilds/mustache" --json > /tmp/reference.json
+node -e '
+const fs = require("fs");
+const reference = JSON.parse(fs.readFileSync("/tmp/reference.json", "utf8"));
+const application = JSON.parse(fs.readFileSync("/tmp/analysis.json", "utf8"));
+fs.writeFileSync("/tmp/compare-input.json", JSON.stringify({ reference, application }));
+'
+npx -y rea-agents@6.5.0 compare-source-to-bundle /tmp/compare-input.json --json > /tmp/compare.json
+node --test rebuilds/mustache/test/differential.test.mjs
+```
+
+(The first run built the input with the same code saved as a script outside
+the repo; the inline form above was verified to produce a byte-identical
+input and the identical comparison record.)
