@@ -17,12 +17,23 @@ before the first analysis in a session.
 - `rebuilds/<name>/` — clean reimplementations rebuilt from the evidence, each
   with a differential test against the original artifact (worked example:
   `rebuilds/mustache/`).
+- `scripts/fetch-target.sh` — intake: fetches an npm package, GitHub Release
+  asset, URL or local path into `targets/<name>/` and writes `NOTES.md` with
+  origin and SHA-256 digests. Executes nothing. Used by the `/re` skill.
+- `.claude/skills/re/` — the `/re <source> [question]` command: intake, REA
+  analysis, report and pull request in one step.
 - `scripts/rea-mcp.sh` — launches the MCP server with a supported Node.js.
 - `scripts/session-start.sh` — SessionStart hook: picks/installs Node, warms the
   `rea-agents` npx cache, runs `rea mcp doctor`, reports optional engines.
 
 ## Working here
 
+- For a new target, follow `.claude/skills/re/SKILL.md` (`/re <source>
+  [question]`): it fetches the artifact with `scripts/fetch-target.sh`, runs
+  the analysis, writes the report and opens the PR. From a cloud session only
+  GitHub Release downloads and package registries are reachable; raw file
+  links and other hosts return 403. The repo is public: never fetch
+  confidential software into `targets/` (README, "Visibility").
 - Use the `rea` MCP tools directly (`open_binary`, `inspect_artifact`,
   `analyze_javascript_application`, `inspect_managed_artifact`,
   `inspect_android_package`, `inspect_binary_layout`, `inspect_go_binary`,

@@ -10,16 +10,43 @@ Cloning this repo gives a session everything it needs:
 | `.mcp.json` | Registers REA as the `rea` MCP server (via `scripts/rea-mcp.sh`) |
 | `.claude/settings.json` | Auto-approves that server, raises the MCP start timeout, runs the SessionStart hook |
 | `scripts/session-start.sh` | Picks (or installs) a supported Node.js, warms the `rea-agents` npx cache, checks the server starts |
+| `scripts/fetch-target.sh` | Fetches an npm package, GitHub Release asset, URL or local file into `targets/<name>/` and writes its `NOTES.md` with origin and SHA-256 digests |
+| `.claude/skills/re/` | The `/re <source> [question]` command: fetch, analyze, report and open the PR in one step |
 | `.claude/skills/reverse-engineer-anything/` | REA's own skill: how to route targets and report evidence |
 | `CLAUDE.md` | Working rules for Claude in this repo |
 | `targets/`, `reports/` | Where artifacts go in and findings come out |
 | `rebuilds/` | Clean reimplementations rebuilt from the evidence, with differential tests against the original (worked example: `rebuilds/mustache/`, see `reports/mustache-min-2026-10-15.md`) |
 | `.devcontainer/` | Same setup for GitHub Codespaces |
 
-## Start a session
+## Quick start: one command
+
+Start a cloud session on `rea-cloud` (browser: [claude.ai/code](https://claude.ai/code)
+→ New session → `rea-cloud`; desktop app: New session → **Cloud** → `rea-cloud`)
+and type one line:
+
+```
+/re npm:left-pad@1.3.0 what does this package do, and does it touch the network?
+/re https://github.com/<owner>/<repo>/releases/download/v1.2.3/app.asar how is the license key stored?
+/re gh:<owner>/<repo>@v1.2.3/firmware.bin inventory the firmware image, do not extract it yet
+/re targets/mustache-min how are templates parsed?
+```
+
+`/re` fetches the target into `targets/<name>/` (writing a `NOTES.md` with
+origin, size and SHA-256), runs the REA analysis, writes
+`reports/<name>-<date>.md` and opens a draft PR containing all of it. Nothing
+has to be committed first. The fetch step is `scripts/fetch-target.sh`, which
+also works by hand. From a cloud session, GitHub Release downloads and the npm
+registry work; other URLs, `raw.githubusercontent.com` included, are usually
+blocked, so for anything else attach the file to the session or publish it as
+a GitHub Release asset.
+While this repo is public, anything fetched into `targets/` and pushed is
+public too (see **Visibility** below).
+
+## Start a session by hand
 
 1. Put the thing to analyze under `targets/<name>/` and commit it (see
-   [targets/README.md](targets/README.md) for large files).
+   [targets/README.md](targets/README.md) for large files), or skip this
+   step and let `/re` fetch it.
 2. Start a cloud session on this repo from any of:
    - **Browser**: [claude.ai/code](https://claude.ai/code) → New session → pick `rea-cloud`
    - **Desktop app**: New session → select **Cloud** → pick `rea-cloud`
