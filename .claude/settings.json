@@ -21,6 +21,7 @@
     "allow": [
       "Bash(npx -y rea-agents@6.5.0:*)",
       "Bash(bash scripts/session-start.sh)",
+      "Bash(bash scripts/fetch-target.sh:*)",
       "Bash(bash scripts/rea-mcp.sh:*)"
     ]
   }
